@@ -127,7 +127,6 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
     return articles
 
 
-# FEED_SOURCES: list[Union[FeedSource]] = []
 FEED_SOURCES: dict[str, FeedSource] = {}
 FEED_ARTICLES: list[Union[FeedArticle]] = []
 FEED_CATEGORIES: dict[str, FeedCategory] = {}
