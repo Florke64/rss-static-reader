@@ -85,6 +85,16 @@ def feed_source_factory(feed_source_plain_data: list[Union[str]]) -> FeedSource:
     return FeedSource(feed_url, feed_title, feed_categories)
 
 
+class FeedCategory:
+    def __init__(self, category_name: str) -> None:
+        self.name: str = category_name
+        self.id: str = "cat_" + get_uri_friendly_str(category_name)
+        self.article_count: int = 0
+
+    def add_article(self) -> None:
+        self.article_count += 1
+
+
 class FeedArticle:
     def __init__(self, article_title: str, article_url: str, published_on: str, article_author: str,
                  feed_source: FeedSource = None) -> None:
@@ -120,6 +130,7 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
 # FEED_SOURCES: list[Union[FeedSource]] = []
 FEED_SOURCES: dict[str, FeedSource] = {}
 FEED_ARTICLES: list[Union[FeedArticle]] = []
+FEED_CATEGORIES: dict[str, FeedCategory] = {}
 WIDGET_TEMPLATES: dict[str, str] = {}
 
 
@@ -226,6 +237,17 @@ def get_source_dedicated_link_block(feed_source_id: str) -> str:
     return template
 
 
+def get_category_dedicated_link_block(feed_category: FeedCategory) -> str:
+    template: str = WIDGET_TEMPLATES.get('category_link_block')
+    print(template)
+    template = template.replace('%category_id%', feed_category.id)
+    template = template.replace('%category_name%', feed_category.name)
+    template = template.replace('%category_article_amount%', str(feed_category.article_count))
+    print(template)
+
+    return template
+
+
 def generate_html_files(target_directory_path: str = "html_target") -> None:
     target_directory: str = path.join(target_directory_path)
     if not path.isdir(target_directory):
@@ -244,12 +266,16 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
     with open(index_html, 'wt') as html_file:
         sources_dedicated_links_dom: str = ''
         article_dedicated_links_dom: str = ''
+        category_dedicated_links_dom: str = ''
 
         for source_id in FEED_SOURCES.keys():  # type: FeedSource
             sources_dedicated_links_dom += get_source_dedicated_link_block(source_id)
 
         for article in FEED_ARTICLES:  # type: FeedArticle
             article_dedicated_links_dom += get_article_dedicated_link_block(article)
+
+        for category in FEED_CATEGORIES.values():  # type: FeedCategory
+            category_dedicated_links_dom += get_category_dedicated_link_block(category)
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',
@@ -259,6 +285,11 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_ARTICLE_DEDICATED_LINKS__-->',
             article_dedicated_links_dom
+        )
+
+        index_html_template_content = index_html_template_content.replace(
+            '<!--__RSS_FEED_CATEGORY_DEDICATED_LINKS__-->',
+            category_dedicated_links_dom
         )
 
         html_file.write(index_html_template_content)
@@ -287,6 +318,12 @@ def main() -> None:
             FEED_ARTICLES.append(article)
             FEED_SOURCES.get(article.feed_source.id).article_count += 1
 
+            for category_name in article.feed_source.feed_categories:
+                if FEED_CATEGORIES.get(category_name) is None:
+                    FEED_CATEGORIES.update({category_name: FeedCategory(category_name)})
+
+                FEED_CATEGORIES.get(category_name).add_article()
+
         # Sorting articles by the date they were posted
         FEED_ARTICLES.sort(key=lambda art: art.published_date_time, reverse=True)
 
@@ -303,5 +340,5 @@ under certain conditions; see `LICENSE.txt` file for details.\n")
 if __name__ == "__main__":
     gplv2_notice()
 
-    load_widgets(['article_link_block', 'source_link_block'])
+    load_widgets(['article_link_block', 'source_link_block', 'category_link_block'])
     main()
