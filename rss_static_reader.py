@@ -120,6 +120,7 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
 # FEED_SOURCES: list[Union[FeedSource]] = []
 FEED_SOURCES: dict[str, FeedSource] = {}
 FEED_ARTICLES: list[Union[FeedArticle]] = []
+WIDGET_TEMPLATES: dict[str, str] = {}
 
 
 class FeedParser(threading.Thread):
@@ -182,13 +183,28 @@ def read_feed_sources(file_feed_list: str) -> dict[str, FeedSource]:
     return _feed_sources
 
 
+def load_widgets(widget_list: list[Union[str]]) -> None:
+    widgets_directory: str = path.join("html_template", "widgets")
+    if not path.isdir(widgets_directory):
+        print('Error no widgets directory!')
+        return
+
+    global WIDGET_TEMPLATES
+    for widget in widget_list:  # type: str
+        widget_template_content: str = ''
+        with open(path.join(widgets_directory, f"{widget}.htm"), 'rt') as widget_file:
+            for text_line in widget_file:  # type: str
+                widget_template_content += text_line
+
+            widget_file.close()
+
+        WIDGET_TEMPLATES.update({widget: widget_template_content})
+
+
 # # #  GENERATING HTML FILES  # # #
 
 def get_article_dedicated_link_block(article: FeedArticle) -> str:
-    template: str = '\n\t\t<div class="article">\
-\n\t\t\t<b><a href="%art_link%" target="_blank">%art_title%</a></b> -- %src_title%<br/>\
-\n\t\t\t<small>Author: %art_author%, Published on: %pub_date%</small><br/>\
-\n\t\t</div>'
+    template: str = WIDGET_TEMPLATES.get('article_link_block')
 
     template = template.replace('%art_link%', article.article_url)
     template = template.replace('%art_title%', article.article_title)
@@ -202,7 +218,7 @@ def get_article_dedicated_link_block(article: FeedArticle) -> str:
 def get_source_dedicated_link_block(feed_source_id: str) -> str:
     feed_source: FeedSource = FEED_SOURCES.get(feed_source_id)
 
-    template: str = '\n\t\t<a href="%source_id%.html">%rss_source_title%</a> (%articles_count%)</span>'
+    template: str = WIDGET_TEMPLATES.get('source_link_block')
     template = template.replace('%rss_source_title%', feed_source.feed_title)
     template = template.replace('%articles_count%', str(feed_source.article_count))
     template = template.replace('%source_id%', feed_source_id)
@@ -292,9 +308,6 @@ def main() -> None:
 
     generate_html_files(config.TARGET_HTML_DIR)
 
-    # for article in FEED_ARTICLES:  # type: FeedArticle
-    #     print(article.article_title, article.published_date_time)
-
 
 def gplv2_notice():
     print("RSS Static Reader, Copyright (C) 2021 Daniel Wasiak \n\
@@ -305,4 +318,6 @@ under certain conditions; see `LICENSE.txt` file for details.\n")
 
 if __name__ == "__main__":
     gplv2_notice()
+
+    load_widgets(['article_link_block', 'source_link_block'])
     main()
