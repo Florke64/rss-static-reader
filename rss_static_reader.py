@@ -265,22 +265,6 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
 
         html_file.close()
 
-    # _feed_sources: list[Union[FeedSource]] = []
-    #
-    # with open(target_directory, 'rt') as config_file:
-    #
-    #     for line in config_file:  # type: str
-    #         # Skipping empty lines and comments
-    #         stripped_line: str = line.strip()
-    #         if stripped_line == '' or stripped_line.startswith('#'):
-    #             continue
-    #
-    #         feed_source_data: list[Union[str]] = line.replace('\n', '').split(';', 2)
-    #         feed_source: FeedSource = feed_source_factory(feed_source_data)
-    #         _feed_sources.append(feed_source)
-    #
-    #     config_file.close()
-
 
 def main() -> None:
     # Firstly, get list of RSS sources to grab articles from...
