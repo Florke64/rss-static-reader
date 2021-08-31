@@ -60,7 +60,7 @@ def common_list_item(l1: list, l2: list) -> bool:
 class FeedSource:
     def __init__(self, feed_url: str, feed_title: str, feed_categories: list[Union[str]] = None) -> None:
         self.feed_url: str = feed_url
-        self.feed_title: str = feed_title
+        self.name: str = feed_title
         self.feed_categories: list[Union[str]] = feed_categories
         self.id: str = "src_" + get_uri_friendly_str(feed_url)
 
@@ -173,7 +173,7 @@ class FeedParser(threading.Thread):
 
         self.articles_num = len(self.fetched_articles)
 
-        print(f"{self.feed_source.feed_title} ({self.articles_num} articles) -- Parser finished in {self.elapsed_time}")
+        print(f"{self.feed_source.name} ({self.articles_num} articles) -- Parser finished in {self.elapsed_time}")
 
 
 def read_feed_sources(file_feed_list: str) -> dict[str, FeedSource]:
@@ -225,7 +225,7 @@ def get_article_dedicated_link_block(article: FeedArticle) -> str:
 
     template = template.replace('%art_link%', article.article_url)
     template = template.replace('%art_title%', article.article_title)
-    template = template.replace('%src_title%', article.feed_source.feed_title)
+    template = template.replace('%src_title%', article.feed_source.name)
     template = template.replace('%art_author%', article.article_author)
     template = template.replace('%pub_date%', article.published_date_time.strftime("%A, %d %b %Y %H:%M"))
 
@@ -236,7 +236,7 @@ def get_source_dedicated_link_block(feed_source_id: str) -> str:
     feed_source: FeedSource = FEED_SOURCES.get(feed_source_id)
 
     template: str = WIDGET_TEMPLATES.get('source_link_block')
-    template = template.replace('%rss_source_title%', feed_source.feed_title)
+    template = template.replace('%rss_source_title%', feed_source.name)
     template = template.replace('%articles_count%', str(feed_source.article_count))
     template = template.replace('%source_id%', feed_source_id)
 
@@ -272,6 +272,14 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
     if target_filename == "*":
         is_index = True
         target_filename = "index"
+
+    page_title_dom: str = WIDGET_TEMPLATES.get('page_title')
+    page_title = FEED_SOURCES.get(subfeed_id) or FEED_CATEGORIES.get(subfeed_id)
+    if is_index:
+        page_title = 'All Articles'
+    else:
+        page_title = page_title.name
+    page_title_dom = page_title_dom.replace('%page_title%', page_title)
 
     index_html: str = path.join(target_directory, f"{target_filename}.html")
     with open(index_html, 'wt') as html_file:
@@ -311,6 +319,11 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
                 '<!--__RSS_FEED_BACK_HOME_LINK-->',
                 WIDGET_TEMPLATES.get('back_link_block')
             )
+
+        index_html_template_content = index_html_template_content.replace(
+            '<!--__RSS_FEED_PAGE_TITLE__-->',
+            page_title_dom
+        )
 
         html_file.write(index_html_template_content)
 
@@ -368,5 +381,5 @@ under certain conditions; see `LICENSE.txt` file for details.\n")
 if __name__ == "__main__":
     gplv2_notice()
 
-    load_widgets(['article_link_block', 'source_link_block', 'category_link_block', 'back_link_block'])
+    load_widgets(['article_link_block', 'source_link_block', 'category_link_block', 'back_link_block', 'page_title'])
     main()
