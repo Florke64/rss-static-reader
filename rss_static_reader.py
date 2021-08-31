@@ -48,6 +48,13 @@ def get_uri_friendly_str(text: str, encoding: str = 'utf-8') -> str:
     return base.b64encode(bytes(text, encoding)).decode(encoding)
 
 
+def common_list_item(l1: list, l2: list) -> bool:
+    for i in l1:
+        if i in l2:
+            return True
+    return False
+
+
 # # #  PARSING RSS FEED  # # #
 
 class FeedSource:
@@ -247,7 +254,7 @@ def get_category_dedicated_link_block(feed_category: FeedCategory) -> str:
     return template
 
 
-def generate_html_files(target_directory_path: str = "html_target") -> None:
+def generate_html_files(target_directory_path: str = "html_target", subfeed_id: str = "*") -> None:
     target_directory: str = path.join(target_directory_path)
     if not path.isdir(target_directory):
         os.mkdir(target_directory)
@@ -261,7 +268,13 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
 
         html_file.close()
 
-    index_html: str = path.join(target_directory, "index.html")
+    is_index: bool = False
+    target_filename: str = subfeed_id
+    if target_filename == "*":
+        is_index = True
+        target_filename = "index"
+
+    index_html: str = path.join(target_directory, f"{target_filename}.html")
     with open(index_html, 'wt') as html_file:
         sources_dedicated_links_dom: str = ''
         article_dedicated_links_dom: str = ''
@@ -270,11 +283,15 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
         for source_id in FEED_SOURCES.keys():  # type: FeedSource
             sources_dedicated_links_dom += get_source_dedicated_link_block(source_id)
 
-        for article in FEED_ARTICLES:  # type: FeedArticle
-            article_dedicated_links_dom += get_article_dedicated_link_block(article)
-
         for category in FEED_CATEGORIES.values():  # type: FeedCategory
             category_dedicated_links_dom += get_category_dedicated_link_block(category)
+
+        for article in FEED_ARTICLES:  # type: FeedArticle
+            print(FEED_CATEGORIES, article.feed_source.feed_categories)
+            if is_index or \
+                (subfeed_id.startswith("src_") and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
+                    (subfeed_id.startswith("cat_") and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.feed_categories):
+                        article_dedicated_links_dom += get_article_dedicated_link_block(article)
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',
@@ -282,13 +299,13 @@ def generate_html_files(target_directory_path: str = "html_target") -> None:
         )
 
         index_html_template_content = index_html_template_content.replace(
-            '<!--__RSS_FEED_ARTICLE_DEDICATED_LINKS__-->',
-            article_dedicated_links_dom
+            '<!--__RSS_FEED_CATEGORY_DEDICATED_LINKS__-->',
+            category_dedicated_links_dom
         )
 
         index_html_template_content = index_html_template_content.replace(
-            '<!--__RSS_FEED_CATEGORY_DEDICATED_LINKS__-->',
-            category_dedicated_links_dom
+            '<!--__RSS_FEED_ARTICLE_DEDICATED_LINKS__-->',
+            article_dedicated_links_dom
         )
 
         html_file.write(index_html_template_content)
@@ -318,15 +335,23 @@ def main() -> None:
             FEED_SOURCES.get(article.feed_source.id).article_count += 1
 
             for category_name in article.feed_source.feed_categories:
-                if FEED_CATEGORIES.get(category_name) is None:
-                    FEED_CATEGORIES.update({category_name: FeedCategory(category_name)})
+                category_id: str = "cat_" + get_uri_friendly_str(category_name)
+                if FEED_CATEGORIES.get(category_id) is None:
+                    category: FeedCategory = FeedCategory(category_name)
+                    FEED_CATEGORIES.update({category.id: category})
 
-                FEED_CATEGORIES.get(category_name).add_article()
+                FEED_CATEGORIES.get(category_id).add_article()
 
         # Sorting articles by the date they were posted
         FEED_ARTICLES.sort(key=lambda art: art.published_date_time, reverse=True)
 
     generate_html_files(config.TARGET_HTML_DIR)
+
+    for category_id in FEED_CATEGORIES.keys():  # type: FeedCategory
+        generate_html_files(config.TARGET_HTML_DIR, category_id)
+
+    for source_id in FEED_SOURCES.keys():  # type: FeedSource
+        generate_html_files(config.TARGET_HTML_DIR, source_id)
 
 
 def gplv2_notice():
