@@ -306,6 +306,12 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             article_dedicated_links_dom
         )
 
+        if not is_index:
+            index_html_template_content = index_html_template_content.replace(
+                '<!--__RSS_FEED_BACK_HOME_LINK-->',
+                WIDGET_TEMPLATES.get('back_link_block')
+            )
+
         html_file.write(index_html_template_content)
 
         html_file.close()
@@ -362,5 +368,5 @@ under certain conditions; see `LICENSE.txt` file for details.\n")
 if __name__ == "__main__":
     gplv2_notice()
 
-    load_widgets(['article_link_block', 'source_link_block', 'category_link_block'])
+    load_widgets(['article_link_block', 'source_link_block', 'category_link_block', 'back_link_block'])
     main()
