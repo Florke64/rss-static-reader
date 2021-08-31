@@ -245,11 +245,10 @@ def get_source_dedicated_link_block(feed_source_id: str) -> str:
 
 def get_category_dedicated_link_block(feed_category: FeedCategory) -> str:
     template: str = WIDGET_TEMPLATES.get('category_link_block')
-    print(template)
+
     template = template.replace('%category_id%', feed_category.id)
     template = template.replace('%category_name%', feed_category.name)
     template = template.replace('%category_article_amount%', str(feed_category.article_count))
-    print(template)
 
     return template
 
@@ -287,7 +286,6 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             category_dedicated_links_dom += get_category_dedicated_link_block(category)
 
         for article in FEED_ARTICLES:  # type: FeedArticle
-            print(FEED_CATEGORIES, article.feed_source.feed_categories)
             if is_index or \
                 (subfeed_id.startswith("src_") and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
                     (subfeed_id.startswith("cat_") and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.feed_categories):
