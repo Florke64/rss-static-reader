@@ -287,7 +287,7 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
         article_dedicated_links_dom: str = ''
         category_dedicated_links_dom: str = ''
 
-        for source_id in FEED_SOURCES.keys():  # type: FeedSource
+        for source_id in FEED_SOURCES.keys():  # type: str
             sources_dedicated_links_dom += get_source_dedicated_link_block(source_id)
 
         for category in FEED_CATEGORIES.values():  # type: FeedCategory
@@ -364,10 +364,10 @@ def main() -> None:
 
     generate_html_files(config.TARGET_HTML_DIR)
 
-    for category_id in FEED_CATEGORIES.keys():  # type: FeedCategory
+    for category_id in FEED_CATEGORIES.keys():  # type: str
         generate_html_files(config.TARGET_HTML_DIR, category_id)
 
-    for source_id in FEED_SOURCES.keys():  # type: FeedSource
+    for source_id in FEED_SOURCES.keys():  # type: str
         generate_html_files(config.TARGET_HTML_DIR, source_id)
 
 
