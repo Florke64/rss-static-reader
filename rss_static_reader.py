@@ -220,37 +220,16 @@ def load_widgets(widget_list: list[Union[str]]) -> None:
 
 # # #  GENERATING HTML FILES  # # #
 
-def get_article_dedicated_link_block(article: FeedArticle) -> str:
-    template: str = WIDGET_TEMPLATES.get('article_link_block')
+def use_widget(widget_id: str, widget_data: dict[str, str]) -> str:
+    widget_template: str = WIDGET_TEMPLATES.get(widget_id)
 
-    template = template.replace('%art_link%', article.article_url)
-    template = template.replace('%art_title%', article.article_title)
-    template = template.replace('%src_title%', article.feed_source.name)
-    template = template.replace('%art_author%', article.article_author)
-    template = template.replace('%pub_date%', article.published_date_time.strftime("%A, %d %b %Y %H:%M"))
+    if widget_template is None:
+        raise IndexError(f'Widget {widget_id} doesn\'t exist or HTML theme is not complete.')
 
-    return template
+    for key in widget_data.keys():  # type: str
+        widget_template = widget_template.replace(f'%{key}%', widget_data.get(key))
 
-
-def get_source_dedicated_link_block(feed_source_id: str) -> str:
-    feed_source: FeedSource = FEED_SOURCES.get(feed_source_id)
-
-    template: str = WIDGET_TEMPLATES.get('source_link_block')
-    template = template.replace('%rss_source_title%', feed_source.name)
-    template = template.replace('%articles_count%', str(feed_source.article_count))
-    template = template.replace('%source_id%', feed_source_id)
-
-    return template
-
-
-def get_category_dedicated_link_block(feed_category: FeedCategory) -> str:
-    template: str = WIDGET_TEMPLATES.get('category_link_block')
-
-    template = template.replace('%category_id%', feed_category.id)
-    template = template.replace('%category_name%', feed_category.name)
-    template = template.replace('%category_article_amount%', str(feed_category.article_count))
-
-    return template
+    return widget_template
 
 
 def generate_html_files(target_directory_path: str = "html_target", subfeed_id: str = "*") -> None:
@@ -287,17 +266,32 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
         article_dedicated_links_dom: str = ''
         category_dedicated_links_dom: str = ''
 
-        for source_id in FEED_SOURCES.keys():  # type: str
-            sources_dedicated_links_dom += get_source_dedicated_link_block(source_id)
+        for source in FEED_SOURCES.values():  # type: FeedSource
+            sources_dedicated_links_dom += use_widget('source_link_block', {
+                'source_id': source.id,
+                'rss_source_title': source.name,
+                'articles_count': str(source.article_count)
+            })
 
         for category in FEED_CATEGORIES.values():  # type: FeedCategory
-            category_dedicated_links_dom += get_category_dedicated_link_block(category)
+            category_dedicated_links_dom += use_widget('category_link_block', {
+                'category_id': category.id,
+                'category_name': category.name,
+                'category_article_amount': str(category.article_count)
+            })
 
         for article in FEED_ARTICLES:  # type: FeedArticle
             if is_index or \
                 (subfeed_id.startswith("src_") and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
                     (subfeed_id.startswith("cat_") and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.feed_categories):
-                article_dedicated_links_dom += get_article_dedicated_link_block(article)
+                article_dedicated_links_dom += use_widget('article_link_block', {
+                    'art_link': article.article_url,
+                    'art_title': article.article_title,
+                    'src_title': article.feed_source.name,
+                    'art_author': article.article_author,
+                    'pub_date': article.published_date_time.strftime("%A, %d %b %Y %H:%M"),
+                    # TODO: Move DATE_FORMAT to config.py
+                })
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',
