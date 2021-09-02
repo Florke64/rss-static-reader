@@ -5,8 +5,21 @@
 #     You should have received a copy of the GNU General Public License.
 #     See `LICENSE.txt` for more details.
 
+# Main configuration:
+
+RELOAD_TIME: float = 15  # in minutes
 RSS_FEED_FILE: str = "rss-feed-list.conf"
 TARGET_HTML_DIR: str = "html"
+
+# Advanced config:
+WIDGET_LIST: tuple = (
+    'article_link_block',
+    'source_link_block',
+    'category_link_block',
+    'back_link_block',
+    'page_title',
+    'footer_generate_time'
+)
 
 if __name__ == "__main__":
     print("Error: This is configuration file for RSS Static Reader and not a standalone program")

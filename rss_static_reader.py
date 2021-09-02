@@ -133,10 +133,22 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
     return articles
 
 
-FEED_SOURCES: dict[str, FeedSource] = {}
-FEED_ARTICLES: list[Union[FeedArticle]] = []
-FEED_CATEGORIES: dict[str, FeedCategory] = {}
-WIDGET_TEMPLATES: dict[str, str] = {}
+FEED_SOURCES: dict[str, FeedSource]
+FEED_ARTICLES: list[Union[FeedArticle]]
+FEED_CATEGORIES: dict[str, FeedCategory]
+WIDGET_TEMPLATES: dict[str, str]
+
+
+def clear_cache() -> None:
+    global FEED_SOURCES
+    global FEED_ARTICLES
+    global FEED_CATEGORIES
+    global WIDGET_TEMPLATES
+
+    FEED_SOURCES = {}
+    FEED_ARTICLES = []
+    FEED_CATEGORIES = {}
+    WIDGET_TEMPLATES = {}
 
 
 class FeedParser(threading.Thread):
@@ -199,7 +211,7 @@ def read_feed_sources(file_feed_list: str) -> dict[str, FeedSource]:
     return _feed_sources
 
 
-def load_widgets(widget_list: list[Union[str]]) -> None:
+def load_widgets(widget_list: tuple[Union[str]]) -> None:
     widgets_directory: str = path.join("html_template", "widgets")
     if not path.isdir(widgets_directory):
         print('Error no widgets directory!')
@@ -218,6 +230,16 @@ def load_widgets(widget_list: list[Union[str]]) -> None:
 
 
 # # #  GENERATING HTML FILES  # # #
+
+def wipe_target() -> None:
+    target_directory: str = path.join(config.TARGET_HTML_DIR)
+    if not path.isdir(target_directory):
+        os.mkdir(target_directory)
+        return
+
+    for file in os.listdir(target_directory):  # type: str
+        os.remove(path.join(target_directory, file))
+
 
 def use_widget(widget_id: str, widget_data: dict[str, str]) -> str:
     widget_template: str = WIDGET_TEMPLATES.get(widget_id)
@@ -307,12 +329,19 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             page_title_dom
         )
 
+        index_html_template_content = index_html_template_content.replace(
+            '<!--__RSS_FEED_FOOTER_GEN_TIME__-->',
+            use_widget('footer_generate_time', {'time': datetime.datetime.now().strftime("%A, %d %b %Y %H:%M")})
+        )
+
         html_file.write(index_html_template_content)
 
         html_file.close()
 
 
-def main() -> None:
+def run() -> None:
+    load_widgets(config.WIDGET_LIST)
+
     # Firstly, get list of RSS sources to grab articles from...
     global FEED_SOURCES
     FEED_SOURCES = read_feed_sources(config.RSS_FEED_FILE)
@@ -344,6 +373,27 @@ def main() -> None:
         generate_html_files(config.TARGET_HTML_DIR, source_id)
 
 
+def main() -> None:
+    clear_cache()
+    wipe_target()
+
+    # Converting minutes from config to seconds
+    reload_time_sec: float = config.RELOAD_TIME * 60 if config.RELOAD_TIME > 0 else -1
+
+    running: bool = True
+
+    while running:
+        run()
+
+        if reload_time_sec != -1:
+            print(f"INFO: Waiting {config.RELOAD_TIME} minute(s) for next run...\n")
+            time.sleep(reload_time_sec)
+        else:
+            break
+
+    print("Job finished.")
+
+
 def gplv2_notice():
     print("RSS Static Reader, Copyright (C) 2021 Daniel Wasiak \n\
 RSS Static Reader comes with ABSOLUTELY NO WARRANTY; for details see `LICENSE.txt` file. \n\
@@ -353,6 +403,4 @@ under certain conditions; see `LICENSE.txt` file for details.\n")
 
 if __name__ == "__main__":
     gplv2_notice()
-
-    load_widgets(['article_link_block', 'source_link_block', 'category_link_block', 'back_link_block', 'page_title'])
     main()
