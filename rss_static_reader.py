@@ -48,20 +48,23 @@ def get_uri_friendly_str(text: str, encoding: str = 'utf-8') -> str:
     return base.b64encode(bytes(text, encoding)).decode(encoding)
 
 
-def common_list_item(l1: list, l2: list) -> bool:
-    for i in l1:
-        if i in l2:
-            return True
-    return False
-
-
 # # #  PARSING RSS FEED  # # #
 
+class FeedCategory:
+    def __init__(self, category_name: str) -> None:
+        self.name: str = category_name
+        self.id: str = "cat_" + get_uri_friendly_str(category_name)
+        self.article_count: int = 0
+
+    def add_article(self) -> None:
+        self.article_count += 1
+
+
 class FeedSource:
-    def __init__(self, feed_url: str, feed_title: str, feed_categories: list[Union[str]] = None) -> None:
+    def __init__(self, feed_url: str, feed_title: str, categories: list[Union[str]] = None) -> None:
         self.feed_url: str = feed_url
         self.name: str = feed_title
-        self.feed_categories: list[Union[str]] = feed_categories
+        self.categories: list[Union[str]] = categories
         self.id: str = "src_" + get_uri_friendly_str(feed_url)
 
         self.article_count: int = 0
@@ -79,27 +82,11 @@ def feed_source_factory(feed_source_plain_data: list[Union[str]]) -> FeedSource:
     # Parsing feed title
     feed_title: str = list_element_or_default(feed_source_plain_data, 1, "Untitled RSS Feed")
     # Parsing feed categories
-    feed_categories: str = list_element_or_default(feed_source_plain_data, 2, "")
-    feed_categories: list[Union[str]] = split_categories(feed_categories)
-
-    # TODO: Links will use raw_feed_categories elements in the future
-    # raw_feed_categories: list[Union[str]] = []
-    #
-    # for category in feed_categories:  # type: str
-    #     raw_feed_categories.append(get_uri_friendly_str(category))
+    category_names: str = list_element_or_default(feed_source_plain_data, 2, "")
+    category_names: list[Union[str]] = split_categories(category_names)
 
     # Crating final FeedSource object
-    return FeedSource(feed_url, feed_title, feed_categories)
-
-
-class FeedCategory:
-    def __init__(self, category_name: str) -> None:
-        self.name: str = category_name
-        self.id: str = "cat_" + get_uri_friendly_str(category_name)
-        self.article_count: int = 0
-
-    def add_article(self) -> None:
-        self.article_count += 1
+    return FeedSource(feed_url, feed_title, category_names)
 
 
 class FeedArticle:
@@ -117,6 +104,18 @@ class FeedArticle:
 
         # Optional Values
         self.comments_url: Union[str, None] = None
+
+    def register(self):
+        FEED_ARTICLES.append(self)
+        FEED_SOURCES.get(self.feed_source.id).article_count += 1
+
+        for category_name in self.feed_source.categories:  # type: str
+            category_id: str = "cat_" + get_uri_friendly_str(category_name)
+            if FEED_CATEGORIES.get(category_id) is None:
+                category: FeedCategory = FeedCategory(category_name)
+                FEED_CATEGORIES.update({category.id: category})
+
+            FEED_CATEGORIES.get(category_id).add_article()
 
 
 def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> list[Union[FeedArticle]]:
@@ -232,7 +231,7 @@ def use_widget(widget_id: str, widget_data: dict[str, str]) -> str:
     return widget_template
 
 
-def generate_html_files(target_directory_path: str = "html_target", subfeed_id: str = "*") -> None:
+def generate_html_files(target_directory_path: str = "html_target", subfeed_id: str = "index") -> None:
     target_directory: str = path.join(target_directory_path)
     if not path.isdir(target_directory):
         os.mkdir(target_directory)
@@ -246,21 +245,11 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
 
         html_file.close()
 
-    is_index: bool = False
-    target_filename: str = subfeed_id
-    if target_filename == "*":
-        is_index = True
-        target_filename = "index"
+    page_type = FEED_SOURCES.get(subfeed_id) or FEED_CATEGORIES.get(subfeed_id)
+    page_title = 'All Articles' if subfeed_id == 'index' else page_type.name
+    page_title_dom = use_widget('page_title', {'page_title': page_title})
 
-    page_title_dom: str = WIDGET_TEMPLATES.get('page_title')
-    page_title = FEED_SOURCES.get(subfeed_id) or FEED_CATEGORIES.get(subfeed_id)
-    if is_index:
-        page_title = 'All Articles'
-    else:
-        page_title = page_title.name
-    page_title_dom = page_title_dom.replace('%page_title%', page_title)
-
-    index_html: str = path.join(target_directory, f"{target_filename}.html")
+    index_html: str = path.join(target_directory, f"{subfeed_id}.html")
     with open(index_html, 'wt') as html_file:
         sources_dedicated_links_dom: str = ''
         article_dedicated_links_dom: str = ''
@@ -281,9 +270,9 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             })
 
         for article in FEED_ARTICLES:  # type: FeedArticle
-            if is_index or \
-                (subfeed_id.startswith("src_") and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
-                    (subfeed_id.startswith("cat_") and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.feed_categories):
+            if subfeed_id == "index" or \
+                (type(page_type) is FeedSource and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
+                    (type(page_type) is FeedCategory and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.categories):
                 article_dedicated_links_dom += use_widget('article_link_block', {
                     'art_link': article.article_url,
                     'art_title': article.article_title,
@@ -308,11 +297,10 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             article_dedicated_links_dom
         )
 
-        if not is_index:
-            index_html_template_content = index_html_template_content.replace(
-                '<!--__RSS_FEED_BACK_HOME_LINK-->',
-                WIDGET_TEMPLATES.get('back_link_block')
-            )
+        index_html_template_content = index_html_template_content.replace(
+            '<!--__RSS_FEED_BACK_HOME_LINK-->',
+            WIDGET_TEMPLATES.get('back_link_block')
+        ) if subfeed_id != "index" else index_html_template_content
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_PAGE_TITLE__-->',
@@ -342,19 +330,10 @@ def main() -> None:
 
         # Appending all grabbed articles to the main list
         for article in feed_parser.fetched_articles:  # type: FeedArticle
-            FEED_ARTICLES.append(article)
-            FEED_SOURCES.get(article.feed_source.id).article_count += 1
+            article.register()
 
-            for category_name in article.feed_source.feed_categories:
-                category_id: str = "cat_" + get_uri_friendly_str(category_name)
-                if FEED_CATEGORIES.get(category_id) is None:
-                    category: FeedCategory = FeedCategory(category_name)
-                    FEED_CATEGORIES.update({category.id: category})
-
-                FEED_CATEGORIES.get(category_id).add_article()
-
-        # Sorting articles by the date they were posted
-        FEED_ARTICLES.sort(key=lambda art: art.published_date_time, reverse=True)
+    # Sorting articles by the date they were posted
+    FEED_ARTICLES.sort(key=lambda art: art.published_date_time, reverse=True)
 
     generate_html_files(config.TARGET_HTML_DIR)
 
