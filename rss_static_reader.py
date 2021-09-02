@@ -297,7 +297,7 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
             if is_index or \
                 (subfeed_id.startswith("src_") and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
                     (subfeed_id.startswith("cat_") and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.feed_categories):
-                        article_dedicated_links_dom += get_article_dedicated_link_block(article)
+                article_dedicated_links_dom += get_article_dedicated_link_block(article)
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',
