@@ -20,9 +20,9 @@ If your Python is, let's say, version `3.7` it won't be compatible. However, ple
 
 One required thing is to install `feedparser` module for python. It is actively supported Python module and you can insatll it easily via `pip install feedparser`. It is dependency of the rss-static-reader and core library it uses.
 
-## Screenshots
+## Screenshot
 
->To be added soon...
+![Screenshot](github/screenshot-target-00.jpg 'Screenshot of the default theme.')
 
 ## Configuration
 
@@ -56,10 +56,11 @@ Output look can be customized to look a bit nicer than now.
 Link to randomly choosen "article of the day" or something like that.
 
 - **Feed limit**:
-Partially implemented feature. Number of the articles shown under the single page would be possible limit.
+Number of the articles shown under the single page would be possible limit.
 
 - **Scheduled updates**:
-Probably most important, almost core function of this project. Program will periodically refresh generated HTML files so everytime you open them there will new set of news appear.
+(Partially implemented)
+~~Probably most important, almost core function of this project. Program will periodically refresh generated HTML files so everytime you open them there will new set of news appear.~~
 
 - **Code cleanup**: Technical thing I'll work on. Currently code is a total mess and I want to improve it as I learn Python. It also means that I'll work on Exception handling.
 
