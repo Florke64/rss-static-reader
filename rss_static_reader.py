@@ -339,7 +339,7 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
         html_file.close()
 
 
-def run() -> None:
+def process() -> None:
     load_widgets(config.WIDGET_LIST)
 
     # Firstly, get list of RSS sources to grab articles from...
@@ -373,25 +373,44 @@ def run() -> None:
         generate_html_files(config.TARGET_HTML_DIR, source_id)
 
 
+class MainLoop(threading.Thread):
+    def __init__(self) -> None:
+        threading.Thread.__init__(self)
+
+        self.__running: bool = False
+
+    def run(self) -> None:
+        # Converting minutes from config to seconds
+        reload_time_sec: float = config.RELOAD_TIME * 60 if config.RELOAD_TIME > 0 else -1
+
+        self.set_running(True)
+
+        start_time: float = time.time()
+        while self.__running:
+            clear_cache()
+            wipe_target()
+            process()
+
+            finish_time: float = time.time()
+
+            total_job_time: float = finish_time - start_time
+            print(f"Job finished in {total_job_time} seconds.")
+
+            if reload_time_sec != -1:
+                print(f"INFO: Waiting {config.RELOAD_TIME} minute(s) for next run...\n")
+                time.sleep(reload_time_sec)
+            else:
+                break
+
+    def set_running(self, running: bool):
+        self.__running = running
+
+
 def main() -> None:
-    clear_cache()
-    wipe_target()
+    main_loop: threading.Thread = MainLoop()
+    main_loop.start()
 
-    # Converting minutes from config to seconds
-    reload_time_sec: float = config.RELOAD_TIME * 60 if config.RELOAD_TIME > 0 else -1
-
-    running: bool = True
-
-    while running:
-        run()
-
-        if reload_time_sec != -1:
-            print(f"INFO: Waiting {config.RELOAD_TIME} minute(s) for next run...\n")
-            time.sleep(reload_time_sec)
-        else:
-            break
-
-    print("Job finished.")
+    # TODO: Command-line tool (stop / edit config / force regen / etc.)
 
 
 def gplv2_notice():
