@@ -15,8 +15,8 @@ As it is simply a Python script, you should be abe to run it under any choosen O
 
 You need Python - at least `python3.9` is required, mainly due to the declaration of functions' arguments I've done.
 
-You can check your current version of Python installed on a system via `python --version` command.
-If your Python is, let's say, version `3.7` it won't be compatible. However, please bear in mind, that you can have multiple installations of Python at once. In this case, you should run this script not with `python rss_static_reader.py` command but with for example `python3.9 rss_static_reader.py`.
+You can check your current version of Python installed on a system via `$ python --version` command.
+If your Python is, let's say, version `3.7` it won't be compatible. However, please bear in mind, that you can have multiple installations of Python at once. In this case, you should run this script not with `$ python rss_static_reader.py` command but with for example `$ python3.9 rss_static_reader.py`.
 
 One required thing is to install `feedparser` module for python. It is actively supported Python module and you can insatll it easily via `pip install feedparser`. It is dependency of the rss-static-reader and core library it uses.
 
