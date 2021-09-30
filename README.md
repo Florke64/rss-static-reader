@@ -53,7 +53,7 @@ Below is the list of features I want to implement into this program. When I comp
 Output look can be customized to look a bit nicer than now.
 
 - **Random article**:
-Link to randomly choosen "article of the day" or something like that.
+~~Link to randomly choosen "article of the day" or something like that.~~ [1456773](commit/1456773903813866098f88eae8787822ee352c66)
 
 - **Feed limit**:
 Number of the articles shown under the single page would be possible limit.
