@@ -403,14 +403,14 @@ class MainLoop(threading.Thread):
 
         self.set_running(True)
 
-        start_time: float = time.time()
         while self.__running:
+            start_time: float = time.time()
+
             clear_cache()
             wipe_target()
             process()
 
             finish_time: float = time.time()
-
             total_job_time: float = finish_time - start_time
             print(f"Job finished in {total_job_time} seconds.")
 
