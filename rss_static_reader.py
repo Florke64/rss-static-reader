@@ -243,7 +243,7 @@ def wipe_target() -> None:
         os.remove(path.join(target_directory, file))
 
 
-def use_widget(widget_id: str, widget_data: dict[str, str]) -> str:
+def use_widget(widget_id: str, widget_data: dict[str, str] = {}) -> str:
     widget_template: str = WIDGET_TEMPLATES.get(widget_id)
 
     if widget_template is None:
@@ -339,7 +339,7 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_BACK_HOME_LINK__-->',
-            WIDGET_TEMPLATES.get('back_link_block')
+            use_widget('back_link_block')
         ) if subfeed_id != "index" else index_html_template_content
 
         index_html_template_content = index_html_template_content.replace(
