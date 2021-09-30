@@ -25,6 +25,7 @@ import base64 as base
 import time
 import datetime
 import threading
+import random
 from typing import Union
 
 # 3rd party Python libraries
@@ -135,6 +136,7 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
 
 FEED_SOURCES: dict[str, FeedSource]
 FEED_ARTICLES: list[Union[FeedArticle]]
+RANDOM_ARTICLE_LINK: str = "#"
 FEED_CATEGORIES: dict[str, FeedCategory]
 WIDGET_TEMPLATES: dict[str, str]
 
@@ -291,6 +293,11 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
                 'category_article_amount': str(category.article_count)
             })
 
+        global RANDOM_ARTICLE_LINK
+        article_count: int = len(FEED_ARTICLES)
+        random_article_index: int = random.randint(0, article_count)
+
+        i: int = 0
         for article in FEED_ARTICLES:  # type: FeedArticle
             if subfeed_id == "index" or \
                 (type(page_type) is FeedSource and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
@@ -303,6 +310,17 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
                     'pub_date': article.published_date_time.strftime("%A, %d %b %Y %H:%M"),
                     # TODO: Move DATE_FORMAT to config.py
                 })
+
+            if i == random_article_index and subfeed_id == "index":
+                RANDOM_ARTICLE_LINK = article.article_url
+
+            i += 1
+
+        if config.RANDOM_ARTICLE_LINK and subfeed_id == "index":
+            index_html_template_content = index_html_template_content.replace(
+                '<!--__RSS_RANDOM_ARTICLE_LINK__-->',
+                use_widget('random_article', {'art_link': RANDOM_ARTICLE_LINK})
+            )
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',

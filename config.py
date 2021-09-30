@@ -10,6 +10,7 @@
 RELOAD_TIME: float = 15  # in minutes
 RSS_FEED_FILE: str = "rss-feed-list.conf"
 TARGET_HTML_DIR: str = "html"
+RANDOM_ARTICLE_LINK: bool = True
 
 # Advanced config:
 WIDGET_LIST: tuple = (
@@ -18,7 +19,8 @@ WIDGET_LIST: tuple = (
     'category_link_block',
     'back_link_block',
     'page_title',
-    'footer_generate_time'
+    'footer_generate_time',
+    'random_article'
 )
 
 if __name__ == "__main__":
