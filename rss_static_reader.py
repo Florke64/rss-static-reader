@@ -25,6 +25,7 @@ import base64 as base
 import time
 import datetime
 import threading
+import random
 from typing import Union
 
 # 3rd party Python libraries
@@ -94,10 +95,15 @@ class FeedArticle:
                  feed_source: FeedSource = None) -> None:
         self.article_title: str = article_title
         self.article_url: str = article_url
+        self.published_date_time: float = datetime.datetime.now().timestamp()
 
-        datetime_format = "%a, %d %b %Y %H:%M:%S %z"
-        self.published_date_time: datetime = datetime.datetime.strptime(published_on, datetime_format)
-        # self.published_date_time: str = published_on
+        for datetime_format in config.ACCEPTED_DATETIME_FORMAT:  # type: str
+            try:
+                self.published_date_time = datetime.datetime.strptime(published_on, datetime_format).timestamp()
+                break
+            except ValueError:
+                continue
+
         self.article_author: str = article_author
 
         self.feed_source: Union[FeedSource, None] = feed_source
@@ -135,6 +141,7 @@ def article_list_factory(feedparser_entries: dict, feed_source: FeedSource) -> l
 
 FEED_SOURCES: dict[str, FeedSource]
 FEED_ARTICLES: list[Union[FeedArticle]]
+RANDOM_ARTICLE_LINK: str = "#"
 FEED_CATEGORIES: dict[str, FeedCategory]
 WIDGET_TEMPLATES: dict[str, str]
 
@@ -241,7 +248,7 @@ def wipe_target() -> None:
         os.remove(path.join(target_directory, file))
 
 
-def use_widget(widget_id: str, widget_data: dict[str, str]) -> str:
+def use_widget(widget_id: str, widget_data: dict[str, str] = {}) -> str:
     widget_template: str = WIDGET_TEMPLATES.get(widget_id)
 
     if widget_template is None:
@@ -291,18 +298,39 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
                 'category_article_amount': str(category.article_count)
             })
 
+        global RANDOM_ARTICLE_LINK
+        article_count: int = len(FEED_ARTICLES)
+        random_article_index: int = random.randint(0, article_count)
+
+        i: int = 0
         for article in FEED_ARTICLES:  # type: FeedArticle
             if subfeed_id == "index" or \
-                (type(page_type) is FeedSource and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
-                    (type(page_type) is FeedCategory and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.categories):
+                (type(page_type) is FeedSource and
+                 article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
+                    (type(page_type) is FeedCategory and
+                     FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.categories):
+
+                datetime_from_timestamp: datetime = datetime.datetime.fromtimestamp(article.published_date_time)
+                article_published_date_time: str = datetime_from_timestamp.strftime("%a, %d %b %Y %H:%M:%S %z")
+
                 article_dedicated_links_dom += use_widget('article_link_block', {
                     'art_link': article.article_url,
                     'art_title': article.article_title,
                     'src_title': article.feed_source.name,
                     'art_author': article.article_author,
-                    'pub_date': article.published_date_time.strftime("%A, %d %b %Y %H:%M"),
-                    # TODO: Move DATE_FORMAT to config.py
+                    'pub_date': article_published_date_time,
                 })
+
+            if i == random_article_index and subfeed_id == "index":
+                RANDOM_ARTICLE_LINK = article.article_url
+
+            i += 1
+
+        if config.RANDOM_ARTICLE_LINK and subfeed_id == "index":
+            index_html_template_content = index_html_template_content.replace(
+                '<!--__RSS_RANDOM_ARTICLE_LINK__-->',
+                use_widget('random_article', {'art_link': RANDOM_ARTICLE_LINK})
+            )
 
         index_html_template_content = index_html_template_content.replace(
             '<!--__RSS_FEED_SOURCES_DEDICATED_LINKS__-->',
@@ -320,8 +348,8 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
         )
 
         index_html_template_content = index_html_template_content.replace(
-            '<!--__RSS_FEED_BACK_HOME_LINK-->',
-            WIDGET_TEMPLATES.get('back_link_block')
+            '<!--__RSS_FEED_BACK_HOME_LINK__-->',
+            use_widget('back_link_block')
         ) if subfeed_id != "index" else index_html_template_content
 
         index_html_template_content = index_html_template_content.replace(
@@ -385,14 +413,14 @@ class MainLoop(threading.Thread):
 
         self.set_running(True)
 
-        start_time: float = time.time()
         while self.__running:
+            start_time: float = time.time()
+
             clear_cache()
             wipe_target()
             process()
 
             finish_time: float = time.time()
-
             total_job_time: float = finish_time - start_time
             print(f"Job finished in {total_job_time} seconds.")
 
