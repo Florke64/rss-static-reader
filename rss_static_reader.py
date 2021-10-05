@@ -95,10 +95,15 @@ class FeedArticle:
                  feed_source: FeedSource = None) -> None:
         self.article_title: str = article_title
         self.article_url: str = article_url
+        self.published_date_time: float = datetime.datetime.now().timestamp()
 
-        datetime_format = "%a, %d %b %Y %H:%M:%S %z"
-        self.published_date_time: datetime = datetime.datetime.strptime(published_on, datetime_format)
-        # self.published_date_time: str = published_on
+        for datetime_format in config.ACCEPTED_DATETIME_FORMAT:  # type: str
+            try:
+                self.published_date_time = datetime.datetime.strptime(published_on, datetime_format).timestamp()
+                break
+            except ValueError:
+                continue
+
         self.article_author: str = article_author
 
         self.feed_source: Union[FeedSource, None] = feed_source
@@ -300,15 +305,20 @@ def generate_html_files(target_directory_path: str = "html_target", subfeed_id: 
         i: int = 0
         for article in FEED_ARTICLES:  # type: FeedArticle
             if subfeed_id == "index" or \
-                (type(page_type) is FeedSource and article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
-                    (type(page_type) is FeedCategory and FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.categories):
+                (type(page_type) is FeedSource and
+                 article.feed_source.id == FEED_SOURCES.get(subfeed_id).id) or \
+                    (type(page_type) is FeedCategory and
+                     FEED_CATEGORIES.get(subfeed_id).name in article.feed_source.categories):
+
+                datetime_from_timestamp: datetime = datetime.datetime.fromtimestamp(article.published_date_time)
+                article_published_date_time: str = datetime_from_timestamp.strftime("%a, %d %b %Y %H:%M:%S %z")
+
                 article_dedicated_links_dom += use_widget('article_link_block', {
                     'art_link': article.article_url,
                     'art_title': article.article_title,
                     'src_title': article.feed_source.name,
                     'art_author': article.article_author,
-                    'pub_date': article.published_date_time.strftime("%A, %d %b %Y %H:%M"),
-                    # TODO: Move DATE_FORMAT to config.py
+                    'pub_date': article_published_date_time,
                 })
 
             if i == random_article_index and subfeed_id == "index":
